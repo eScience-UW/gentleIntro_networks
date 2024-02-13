@@ -1,0 +1,174 @@
+---
+title: "Gentle introduction to social networks in R"
+output: html_notebook
+---
+
+### Prof. Jose Manuel MAGALLANES. 
+* Professor at Pontificia Universidad Católica del Peru 
+* Senior Data Scientist at eScience Institute, University of Washington
+
+_______
+
+
+## CONTENTS:
+
+### 1. Network Creation from dataframes
+
+These data frames have been previously prepared, based on the data from [50 influential people in Seattle tech to follow on Twitter](https://www.builtinseattle.com/2018/08/06/50-seattle-tech-twitter-accounts-to-follow). The file can be seen [here](https://docs.google.com/spreadsheets/d/e/2PACX-1vTpWvtfphnO9eRYwmEyxVAxxo1KEsdpK6sK6q5uhJn5x2QtB-eGiso8ibpF16NaHAers4wDIHkvBo64/pubhtml), and includes 3 sheets:
+
+* Network as two columns representing edges.
+* Network as adjacency matrix.
+* Attributes of the Network nodes.
+
+
+```{r}
+fileLink='https://github.com/eScience-UW/gentleIntro_networks/raw/main/data/seattleTop.xlsx'
+
+edges=rio::import(fileLink, which = 'edges') 
+adjacency=rio::import(fileLink, which = 'adjacency')
+attributes=rio::import(fileLink,which ="attributes")
+```
+
+Use the previous dataframes to create the network:
+
+* From the edges:
+
+```{r}
+library(igraph) # package needed
+EliteNet=graph_from_data_frame(edges, directed = F)
+summary(EliteNet)
+```
+
+* From adjacency matrix:
+
+```{r}
+#prepare matrix
+row.names(adjacency)=adjacency[,1] #using names column
+adjacency=adjacency[,-1] # deleting the first column
+adjacencyMatrix=as.matrix(adjacency) 
+
+# the making...
+EliteNet=graph.adjacency(adjacencyMatrix,mode="undirected")
+summary(EliteNet)
+```
+
+### 2. Adding Node attributes
+
+Attributes are added using **vectors**:
+
+```{r}
+V(EliteNet)$male=attributes$male
+V(EliteNet)$followers=attributes$followers
+```
+
+You can use attributes to color nodes:
+
+```{r}
+colors_for_nodes=ifelse(V(EliteNet)$male,'green','red')
+V(EliteNet)$color=colors_for_nodes
+plot(EliteNet)
+```
+## 3. Exploring the Network
+
+
+* Connectedness: A network is  “connected” if there exists a _path_ between any pair of nodes (undirected networks).
+
+```{r}
+is_connected(EliteNet)
+```
+* Density: from 0 to 1, where 1 makes it a ‘complete’ network: there is a link between every pair of nodes.
+
+```{r}
+graph.density(EliteNet)
+```
+
+* Diameter: When two vertices are connected, one can reach the other using multiple egdes. The geodesic is the shorthest path between two connected vertices. Then, the diameter, is the maximum geodesic in a network.
+
+```{r}
+diameter(EliteNet)
+```
+* Transitivity: How probable is that two nodes with a common connection, are also connected.
+
+```{r}
+transitivity(EliteNet)
+
+```
+* Assortativity: it is a measure to see if nodes are connecting to other nodes similar to themselves. Closer to 1 means higher assortativity, closer to -1 diassortativity; while 0 is no assortativity.
+
+    - Degree assortativity: tendency for highly connected nodes to be connected among themselves.
+
+```{r}
+assortativity_degree(EliteNet)
+```
+    - Categorical assortativity: tendency for nodes with other nodes sharing the same category.
+    
+```{r}
+assortativity_nominal(EliteNet,as.factor(V(EliteNet)$male),directed = F)
+```
+    - Assortativity (numerical): 
+
+```{r}
+assortativity(EliteNet,V(EliteNet)$followers,directed = F)
+```
+## 4. Exploration of Network nodes
+
+* Centrality: Identify importance of a node based on the role played in the network structure
+
+    - The eigenvector of a vertex will tell you how well connected is a vertex; that is, vertices with the highest values are considered the most influential as they are connected to vertices that are also well connected.
+
+    - The closeness of a vertex will tell you how close is a vertex to every other vertex. A vertex with high closeness can share information faster than the rest.
+
+    - The betweenness of a vertex will tell you how critical is a vertex to connect vertex that are not connected directly.
+
+```{r}
+
+eigen=eigen_centrality (EliteNet,scale=F)$vector
+close=closeness(EliteNet,normalized=T)
+betw=betweenness(EliteNet,normalized=T)
+
+DFCentrality=as.data.frame(cbind(eigen,close,betw),stringsAsFactors = F)
+names(DFCentrality)=c('Eigenvector','Closeness','Betweenness')
+DFCentrality$person=row.names(DFCentrality)
+row.names(DFCentrality)=NULL
+```
+
+```{r}
+library(ggplot2)
+ggplot(DFCentrality, aes(x=Betweenness, y=Closeness)) + 
+    theme_classic() +
+    geom_text(aes(label=person,size=Eigenvector),show.legend = F,alpha=0.5) 
+```
+
+```{r}
+dplyr::top_n(DFCentrality,2,Eigenvector)$person
+```
+```{r, fig.height=10}
+set.seed(1)
+HubNodes=dplyr::top_n(DFCentrality,2,Eigenvector)$person
+
+V(EliteNet)$label <- ifelse(DFCentrality$person%in%HubNodes,HubNodes,"")
+V(EliteNet)$color <- ifelse(DFCentrality$person%in%HubNodes,"red","grey95")
+
+plot(EliteNet, vertex.label = V(EliteNet)$label,
+     layout = layout.fruchterman.reingold,
+     vertex.frame.color=NA,
+     edge.color="grey90")
+
+```
+
+
+
+
+```{r}
+igraph::min_cut(EliteNet, value.only = FALSE)
+```
+
+
+
+```{r}
+communities=cluster_louvain(EliteNet)
+(partition=membership(communities))
+```
+
+
+
