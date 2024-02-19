@@ -22,6 +22,8 @@ These data frames have been previously prepared, based on the data from [50 infl
 
 
 ```{r}
+rm(list = ls())
+##
 fileLink='https://github.com/eScience-UW/gentleIntro_networks/raw/main/data/seattleTop.xlsx'
 
 edges=rio::import(fileLink, which = 'edges') 
@@ -64,10 +66,13 @@ V(EliteNet)$followers=attributes$followers
 You can use attributes to color nodes:
 
 ```{r}
-colors_for_nodes=ifelse(V(EliteNet)$male,'green','red')
-V(EliteNet)$color=colors_for_nodes
-plot(EliteNet)
+library(ggraph)
+
+base=ggraph(graph = EliteNet)
+base + geom_node_label(aes(label = name,color=male), repel = TRUE,show.legend = F) + geom_edge_link(alpha=0.1)
 ```
+
+
 ## 3. Exploring the Network
 
 
@@ -87,12 +92,7 @@ graph.density(EliteNet)
 ```{r}
 diameter(EliteNet)
 ```
-* Transitivity: How probable is that two nodes with a common connection, are also connected.
 
-```{r}
-transitivity(EliteNet)
-
-```
 * Assortativity: it is a measure to see if nodes are connecting to other nodes similar to themselves. Closer to 1 means higher assortativity, closer to -1 diassortativity; while 0 is no assortativity.
 
     - Degree assortativity: tendency for highly connected nodes to be connected among themselves.
@@ -112,13 +112,12 @@ assortativity(EliteNet,V(EliteNet)$followers,directed = F)
 ```
 ## 4. Exploration of Network nodes
 
-* Centrality: Identify importance of a node based on the role played in the network structure
+- The eigenvector of a vertex will tell you how well connected is a vertex; that is, vertices with the highest values are considered the most influential as they are connected to vertices that are also well connected.
 
-    - The eigenvector of a vertex will tell you how well connected is a vertex; that is, vertices with the highest values are considered the most influential as they are connected to vertices that are also well connected.
+- The closeness of a vertex will tell you how close is a vertex to every other vertex. A vertex with high closeness can share information faster than the rest.
 
-    - The closeness of a vertex will tell you how close is a vertex to every other vertex. A vertex with high closeness can share information faster than the rest.
+- The betweeness of a vertex will tell you how critical is a vertex to connect vertex that are not connected directly.
 
-    - The betweenness of a vertex will tell you how critical is a vertex to connect vertex that are not connected directly.
 
 ```{r}
 
@@ -138,37 +137,128 @@ ggplot(DFCentrality, aes(x=Betweenness, y=Closeness)) +
     theme_classic() +
     geom_text(aes(label=person,size=Eigenvector),show.legend = F,alpha=0.5) 
 ```
+The previous results tells us that two people are salient:
 
 ```{r}
-dplyr::top_n(DFCentrality,2,Eigenvector)$person
-```
-```{r, fig.height=10}
-set.seed(1)
 HubNodes=dplyr::top_n(DFCentrality,2,Eigenvector)$person
+HubNodes
+```
+Let's highlight those guys:
 
-V(EliteNet)$label <- ifelse(DFCentrality$person%in%HubNodes,HubNodes,"")
-V(EliteNet)$color <- ifelse(DFCentrality$person%in%HubNodes,"red","grey95")
+```{r, fig.height=10}
+NodeCount=length(V(EliteNet))
 
-plot(EliteNet, vertex.label = V(EliteNet)$label,
-     layout = layout.fruchterman.reingold,
-     vertex.frame.color=NA,
-     edge.color="grey90")
+V(EliteNet)$label=''
+
+for (index in seq(1:NodeCount)){
+    currentName=V(EliteNet)$name[index]
+    if (currentName%in%HubNodes){
+            V(EliteNet)$label[index]=currentName
+    }
+}
 
 ```
-
-
 
 
 ```{r}
-igraph::min_cut(EliteNet, value.only = FALSE)
+library(ggraph)
+
+base=ggraph(graph = EliteNet)
+base  + geom_node_label(aes(label = label), repel = TRUE,show.legend = F,color='red') + geom_edge_link(alpha=0.1)
 ```
 
+
+## 5. Communities
+
+```{r}
+RandomNet <- erdos.renyi.game(length(V(EliteNet)), 0.5)
+```
+
+* Transitivity: How probable is that two nodes with a common connection, are also connected.
+
+```{r}
+transitivity(RandomNet)
+
+```
+```{r}
+transitivity(EliteNet)
+```
+* Partition
+
+Set of nodes that belong to a group. The hard problems is to decide what node goes where:
+
+```{r}
+# edges that will partition the net
+mincut=igraph::min_cut(EliteNet, value.only = FALSE)$cut
+mincut
+```
+```{r}
+labelsBye=unique(as.vector(ends(EliteNet,mincut))) # flattening
+labelsBye
+```
+```{r}
+EliteNet_cut=delete_edges(EliteNet,mincut)
+
+V(EliteNet)$label=''
+
+for (index in seq(1:NodeCount)){
+    currentName=V(EliteNet)$name[index]
+    if (currentName%in%labelsBye){
+            V(EliteNet)$label[index]=currentName
+    }
+}
+
+base=ggraph(graph =EliteNet_cut ) + geom_edge_link(alpha=0.2)
+base + geom_node_label(aes(label=label),repel = T) 
+```
+
+The **girvan_newman** algorithm is based on creating partitions using the centrality of nodes to create partition too. We can create something similar to the last result like this:
 
 
 ```{r}
-communities=cluster_louvain(EliteNet)
-(partition=membership(communities))
+# creating all partitions
+partition_girvanNewman_all <- edge.betweenness.community(EliteNet,merges = T)
+
+# the first partition
+partition_girvanNewman_first= cut_at(partition_girvanNewman_all,2)
+```
+
+```{r}
+ColorIndex=partition_girvanNewman_first
+```
+
+```{r}
+base=ggraph(graph =EliteNet) + geom_edge_link(alpha=0.2)
+
+base + geom_node_point(aes(color=Labels), show.legend = F, size=4) +
+    geom_node_text(aes(label=label,color=ColorIndex),repel = T,show.legend = F) 
 ```
 
 
+A more complex algorithm is the [Louvain](https://perso.uclouvain.be/vincent.blondel/research/louvain.html): 
+
+```{r}
+partition_louvain=cluster_louvain(EliteNet)
+```
+
+```{r}
+V(EliteNet)$louvain=as.factor(membership(communities))
+base=ggraph(graph =EliteNet) + geom_edge_link(alpha=0.2)
+base + geom_node_point(aes(color=louvain), show.legend = F, size=4) 
+
+```
+
+
+* Modularity:
+
+If we get positive values (being 1 the top value), we could consider there are good community structures ([wiki](https://en.wikipedia.org/wiki/Modularity_(networks))). The higher modularity the connections between the nodes are dense  within a partition but sparse  between nodes in different partitions.
+
+```{r}
+modularity(EliteNet, partition_girvanNewman_first)
+```
+
+
+```{r}
+modularity(partition_louvain)
+```
 
