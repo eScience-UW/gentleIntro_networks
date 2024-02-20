@@ -37,7 +37,9 @@ Use the previous dataframes to create the network:
 
 ```{r}
 library(igraph) # package needed
+
 EliteNet=graph_from_data_frame(edges, directed = F)
+
 summary(EliteNet)
 ```
 
@@ -45,12 +47,14 @@ summary(EliteNet)
 
 ```{r}
 #prepare matrix
-row.names(adjacency)=adjacency[,1] #using names column
+row.names(adjacency)=adjacency[,1] #first column for index
 adjacency=adjacency[,-1] # deleting the first column
 adjacencyMatrix=as.matrix(adjacency) 
 
 # the making...
 EliteNet=graph.adjacency(adjacencyMatrix,mode="undirected")
+
+
 summary(EliteNet)
 ```
 
@@ -69,7 +73,12 @@ You can use attributes to color nodes:
 library(ggraph)
 
 base=ggraph(graph = EliteNet)
-base + geom_node_label(aes(label = name,color=male), repel = TRUE,show.legend = F) + geom_edge_link(alpha=0.1)
+base + geom_node_label(aes(label = name,
+                           color=as.factor(male)),
+                       repel = TRUE,show.legend = F) + 
+       geom_edge_link(alpha=0.1) + 
+       scale_color_manual(values = c('red','blue'))
+  
 ```
 
 
@@ -108,7 +117,7 @@ assortativity_nominal(EliteNet,as.factor(V(EliteNet)$male),directed = F)
     - Assortativity (numerical): 
 
 ```{r}
-assortativity(EliteNet,V(EliteNet)$followers,directed = F)
+assortativity(EliteNet,V(EliteNet)$followers,directed = T)
 ```
 ## 4. Exploration of Network nodes
 
@@ -122,13 +131,17 @@ assortativity(EliteNet,V(EliteNet)$followers,directed = F)
 ```{r}
 
 eigen=eigen_centrality (EliteNet,scale=F)$vector
+
 close=closeness(EliteNet,normalized=T)
+
 betw=betweenness(EliteNet,normalized=T)
 
 DFCentrality=as.data.frame(cbind(eigen,close,betw),stringsAsFactors = F)
 names(DFCentrality)=c('Eigenvector','Closeness','Betweenness')
+
 DFCentrality$person=row.names(DFCentrality)
 row.names(DFCentrality)=NULL
+
 ```
 
 ```{r}
@@ -164,7 +177,11 @@ for (index in seq(1:NodeCount)){
 library(ggraph)
 
 base=ggraph(graph = EliteNet)
-base  + geom_node_label(aes(label = label), repel = TRUE,show.legend = F,color='red') + geom_edge_link(alpha=0.1)
+base  + geom_node_label(aes(label = label), 
+                        repel = TRUE,
+                        show.legend = F,
+                        color='red') + 
+         geom_edge_link(alpha=0.1)
 ```
 
 
@@ -178,7 +195,6 @@ RandomNet <- erdos.renyi.game(length(V(EliteNet)), 0.5)
 
 ```{r}
 transitivity(RandomNet)
-
 ```
 ```{r}
 transitivity(EliteNet)
@@ -230,7 +246,7 @@ ColorIndex=partition_girvanNewman_first
 ```{r}
 base=ggraph(graph =EliteNet) + geom_edge_link(alpha=0.2)
 
-base + geom_node_point(aes(color=Labels), show.legend = F, size=4) +
+base + geom_node_point(aes(color=ColorIndex), show.legend = F, size=4) +
     geom_node_text(aes(label=label,color=ColorIndex),repel = T,show.legend = F) 
 ```
 
