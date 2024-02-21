@@ -258,23 +258,39 @@ partition_louvain=cluster_louvain(EliteNet)
 ```
 
 ```{r}
-V(EliteNet)$louvain=as.factor(membership(communities))
+V(EliteNet)$louvain=membership(partition_louvain)
+
 base=ggraph(graph =EliteNet) + geom_edge_link(alpha=0.2)
-base + geom_node_point(aes(color=louvain), show.legend = F, size=4) 
+base + geom_node_point(aes(color=as.factor(louvain)), show.legend = F, size=4) 
 
 ```
 
+```{r}
+a_partition_girvanNewman=cut_at(partition_girvanNewman_all,max(membership(partition_louvain)))
+```
 
 * Modularity:
 
 If we get positive values (being 1 the top value), we could consider there are good community structures ([wiki](https://en.wikipedia.org/wiki/Modularity_(networks))). The higher modularity the connections between the nodes are dense  within a partition but sparse  between nodes in different partitions.
 
 ```{r}
-modularity(EliteNet, partition_girvanNewman_first)
+modularity(EliteNet, a_partition_girvanNewman)
 ```
 
 
 ```{r}
-modularity(partition_louvain)
+modularity(EliteNet,membership(partition_louvain))
 ```
 
+```{r}
+V(EliteNet)$girvanNewman=membership(partition_louvain)
+```
+```{r}
+EliteNet
+```
+
+
+
+```{r, eval=TRUE}
+write_graph(EliteNet, "EliteNet_R.graphml", "graphml")
+```
