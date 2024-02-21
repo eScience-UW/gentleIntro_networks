@@ -277,18 +277,14 @@ If we get positive values (being 1 the top value), we could consider there are g
 modularity(EliteNet, a_partition_girvanNewman)
 ```
 
-
 ```{r}
 modularity(EliteNet,membership(partition_louvain))
 ```
 
 ```{r}
+V(EliteNet)$louvain=membership(partition_louvain)
 V(EliteNet)$girvanNewman=membership(partition_louvain)
 ```
-```{r}
-EliteNet
-```
-
 
 
 ```{r, eval=TRUE}
