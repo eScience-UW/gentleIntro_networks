@@ -1,7 +1,8 @@
----
-title: "Gentle introduction to social networks in R"
-output: html_notebook
----
+
+
+<center><img src="https://github.com/eScience-UW/gentleIntro_networks/blob/main/Logo.png?raw=true" width="700"></center>
+
+# Gentle introduction to social networks in R
 
 ### Prof. Jose Manuel MAGALLANES. 
 * Professor at Pontificia Universidad Católica del Peru 
