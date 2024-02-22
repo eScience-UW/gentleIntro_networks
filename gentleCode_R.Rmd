@@ -1,6 +1,6 @@
 
 
-<center><img src="https://github.com/eScience-UW/gentleIntro_networks/blob/main/Logo.png?raw=true" width="700"></center>
+<center><img src="https://github.com/eScience-UW/gentleIntro_networks/blob/main/logo2.png?raw=true" width="700"></center>
 
 # Gentle introduction to social networks in R
 
