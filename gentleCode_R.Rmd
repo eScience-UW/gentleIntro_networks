@@ -73,7 +73,7 @@ Attributes are added using **vectors**:
 
 ```{r}
 # edges
-EliteNet$weight=1
+E(EliteNet)$weight=1
 # EliteNet=set_edge_attr(EliteNet,"weight", value = 1)
 
 #nodes
@@ -81,6 +81,18 @@ V(EliteNet)$male=attributes$male
 V(EliteNet)$followers=attributes$followers
 # EliteNet=set_vertex_attr(EliteNet, "followers", value=attributes$followers)
 ```
+
+```{r}
+##
+# E(EliteNet)$weight
+# edge_attr_names(EliteNet)
+# V(EliteNet)$followers
+# vertex_attr_names(EliteNet)
+summary(EliteNet)
+```
+
+
+
 
 You can use attributes to color nodes:
 
@@ -122,7 +134,7 @@ diameter(EliteNet)
     - Degree assortativity: tendency for highly connected nodes to be connected among themselves.
 
 ```{r}
-assortativity_degree(EliteNet)
+assortativity_degree(EliteNet,directed=F)
 ```
     - Categorical assortativity: tendency for nodes with other nodes sharing the same category.
     
@@ -224,23 +236,17 @@ mincut=igraph::min_cut(EliteNet, value.only = FALSE)$cut
 mincut
 ```
 ```{r}
-labelsBye=unique(as.vector(ends(EliteNet,mincut))) # flattening
-labelsBye
+# ends() gives you a matrix, unique() keeps non duplicates
+labelsEdgesBye=unique(as.vector(ends(EliteNet,mincut))) # flattening
+labelsEdgesBye
 ```
 ```{r}
 EliteNet_cut=delete_edges(EliteNet,mincut)
 
-V(EliteNet)$label=''
-
-for (index in seq(1:NodeCount)){
-    currentName=V(EliteNet)$name[index]
-    if (currentName%in%labelsBye){
-            V(EliteNet)$label[index]=currentName
-    }
-}
+SubSetLabels=ifelse(V(EliteNet)$name%in%labelsEdgesBye,V(EliteNet)$name,"")
 
 base=ggraph(graph =EliteNet_cut ) + geom_edge_link(alpha=0.2)
-base + geom_node_label(aes(label=label),repel = T) 
+base + geom_node_label(aes(label=SubSetLabels),repel = T) 
 ```
 
 The **girvan_newman** algorithm is based on creating partitions using the centrality of nodes to create partition too. We can create something similar to the last result like this:
