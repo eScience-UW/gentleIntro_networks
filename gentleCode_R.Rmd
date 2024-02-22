@@ -52,19 +52,34 @@ adjacency=adjacency[,-1] # deleting the first column
 adjacencyMatrix=as.matrix(adjacency) 
 
 # the making...
-EliteNet=graph.adjacency(adjacencyMatrix,mode="undirected")
+EliteNet=graph_from_adjacency_matrix(adjacencyMatrix,mode="undirected")
 
 
 summary(EliteNet)
 ```
+See inside:
 
-### 2. Adding Node attributes
+```{r}
+V(EliteNet)
+```
+
+```{r}
+E(EliteNet)
+```
+
+### 2. Adding Attributes
 
 Attributes are added using **vectors**:
 
 ```{r}
+# edges
+EliteNet$weight=1
+# EliteNet=set_edge_attr(EliteNet,"weight", value = 1)
+
+#nodes
 V(EliteNet)$male=attributes$male
 V(EliteNet)$followers=attributes$followers
+# EliteNet=set_vertex_attr(EliteNet, "followers", value=attributes$followers)
 ```
 
 You can use attributes to color nodes:
